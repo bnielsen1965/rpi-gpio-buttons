@@ -1,0 +1,24 @@
+{
+  "name": "rpi-gpio-buttons",
+  "version": "1.0.0",
+  "description": "Generates button events from GPIO pins.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "gpio",
+    "raspberry",
+    "pi",
+    "button",
+    "debounce",
+    "click",
+    "press",
+    "release"
+  ],
+  "author": "Bryan Nielsen <bnielsen1965@gmail.com> (https://github.com/bnielsen1965)",
+  "license": "MIT",
+  "dependencies": {
+    "rpi-gpio": "^0.8.1"
+  }
+}
