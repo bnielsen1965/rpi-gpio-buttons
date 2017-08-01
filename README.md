@@ -66,10 +66,22 @@ buttons.on('clicked', function (pin) {
 
     // Down button on pin 13 was clicked
     case 13:
-    userclickedDown();
+    userClickedDown();
     break;
   }
 });
+
+
+function userClickedUp() {
+  // do something here for up button
+  console.log('UP');
+}
+
+
+function userClickedDown() {
+  // do something here for down button
+  console.log('DOWN');
+}
 ```
 
 
