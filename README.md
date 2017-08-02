@@ -88,17 +88,52 @@ function userClickedDown() {
 ## API
 
 ### Initialization
+**require('rpi-gpio-buttons')([pin number, pin number, ...], {options})**
 
-**require('rpi-gpio-buttons')([pin number, pin number, ...])**
-
-The rpi-gpio-buttons package exports a function and the function accepts a
-single argument that is an array of integers with each integer being the pin
-number on the GPIO header.
+The rpi-gpio-buttons package exports a function and the function accepts an
+array of integers with each integer being the pin number on the GPIO header.
+An optional second parameter can be included to set custom timing values for
+button events.
 
 ```javascript
 // create an instance of the rpio-gpio-buttons object with pins 11 and 13
 var buttons = require('rpi-gpio-buttons')([11, 13]);
 ```
+
+### Set Timing
+**setTiming(options)**
+
+Timing options can be adjusted after initialization with the setTiming method.
+This makes it possible to adjust button event timing without reintializing the
+button module.
+
+```javascript
+var buttons = require('rpi-gpio-buttons')([11, 13]);
+
+// set 400ms timing value for pressed event
+buttons.setTiming({ pressed: 400 });
+```
+
+
+#### Timing
+Button events are determined by a set of timing values that control the
+amount of time between a button press, release, and any follow up actions.
+The values can be adjusted from a rapid button click to a more relaxed click.
+
+Optional timing values may be passed to the module on initialization or later
+using the setTiming() method. Timing options include the following values...
+
+##### debounce
+The number of milliseconds to allow the input to settle before acting on
+changes to the input.
+
+##### pressed
+Milliseconds to wait after a button is pressed before settling on a pressed
+type event.
+
+##### clicked
+Milliseconds to wait after a button is released before settling on a clicked
+type event.
 
 
 ### Events

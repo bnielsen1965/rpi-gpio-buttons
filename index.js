@@ -25,9 +25,15 @@ const PRESSED_MS = 200;
 const CLICKED_MS = 200;
 
 // pins should be an array of integers for each gpio header pin
-module.exports = function (pins) {
+module.exports = function (pins, options) {
+  options = options || {};
   var emitter = new events.EventEmitter();
   var buttons = {};
+  var timing = {
+    debounce: options.debounce || DEBOUNCE_MS,
+    pressed: options.pressed || PRESSED_MS,
+    clicked: options.clicked || CLICKED_MS
+  };
 
   // setup each pin as a button input
   pins.forEach(function (pin) {
@@ -55,7 +61,7 @@ module.exports = function (pins) {
     // track the current value and start the debounce
     buttons[pin].value = !value; // invert for pull up
     buttons[pin].debounce = true;
-    setTimeout(function () { debounceComplete(pin); }, DEBOUNCE_MS);
+    setTimeout(function () { debounceComplete(pin); }, timing.debounce);
   }
 
   // complete the debounce process on a button press / release
@@ -76,7 +82,7 @@ module.exports = function (pins) {
         break;
       }
       // delay to allow for further state transition
-      buttons[pin].emitTimer = setTimeout(function () { emitState(pin); }, PRESSED_MS);
+      buttons[pin].emitTimer = setTimeout(function () { emitState(pin); }, timing.pressed);
     }
     else {
       // debounced button release
@@ -86,7 +92,7 @@ module.exports = function (pins) {
         clearTimeout(buttons[pin].emitTimer);
         buttons[pin].state = STATE_CLICKED;
         // delay to allow for further state transition
-        buttons[pin].emitTimer = setTimeout(function () { emitState(pin); }, CLICKED_MS);
+        buttons[pin].emitTimer = setTimeout(function () { emitState(pin); }, timing.clicked);
         break;
 
         case STATE_CLICKED_PRESSED:
@@ -141,7 +147,7 @@ module.exports = function (pins) {
       buttons[pin].state = STATE_IDLE;
       break;
     }
-    
+
     buttons[pin].emitTimer = null;
   }
 
@@ -169,5 +175,14 @@ module.exports = function (pins) {
     });
   }
 
+  // set new timing values for button events
+  function setTiming(options) {
+    timing.debounce = options.debounce || timing.debounce;
+    timing.pressed = options.pressed || timing.pressed;
+    timing.clicked = options.clicked || timing.clicked;
+  }
+
+  // export functions
+  emitter.setTiming = setTiming;
   return emitter;
 };
