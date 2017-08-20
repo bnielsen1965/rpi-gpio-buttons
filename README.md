@@ -149,6 +149,9 @@ Possible events include the following...
 * clicked_pressed
 * double_clicked
 * released
+* button_changed
+* button_press
+* button_release
 
 
 #### pressed
@@ -202,3 +205,22 @@ buttons.on('released', function (pin) {
   console.log('User released button on pin ', pin);
 });
 ```
+
+
+#### button_changed
+*This is a low level event and is only used in special circumstances.* The button_changed 
+event occurs anytime there is a button press or release. This event may be
+accompanied by the higher level events that detect user intention, i.e. clicked,
+double_clicked, etc.
+
+
+#### button_press
+*This is a low level event and is only used in special circumstances.* When the user
+presses a button the button_press event will occur. This may be accompanied by
+other high level events that detect user intent.
+
+
+#### button_release
+*This is a low level event and is only used in special circumstances.* A button_release
+event occurs whenever the user releases a button. This may be accompanied by
+other high level events that detect user intent.

@@ -66,8 +66,10 @@ module.exports = function (pins, options) {
 
   // complete the debounce process on a button press / release
   function debounceComplete(pin) {
+    emitter.emit('button_changed', pin);
     if (buttons[pin].last) {
       // debounced button press
+      emitter.emit('button_press', pin);
       switch (buttons[pin].state) {
         case STATE_CLICKED:
         // transition from a clicked state to clicked and pressed
@@ -86,6 +88,7 @@ module.exports = function (pins, options) {
     }
     else {
       // debounced button release
+      emitter.emit('button_release', pin);
       switch (buttons[pin].state) {
         case STATE_PRESSED:
         // transition from pressed to clicked
