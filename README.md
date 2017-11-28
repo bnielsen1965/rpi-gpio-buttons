@@ -42,6 +42,10 @@ that need to be met during installation.
 
 
 ## Usage
+> NOTE: **Pin numbers are the physical numbers from the printed circuit board header**,
+*not* the chip's GPIO number. I.E. When using GPIO17 or BCM17 on a Raspberry Pi
+the header pin number is 11 and GPIO27 or BCM27 is pin number 13.
+
 Using rpio-gpio-buttons in your application requires two steps, create an
 instance of the rpio-gpio-buttons object using an array of header pin numbers
 and then bind to the desired button events that you expect to use in your user
@@ -208,7 +212,7 @@ buttons.on('released', function (pin) {
 
 
 #### button_changed
-*This is a low level event and is only used in special circumstances.* The button_changed 
+*This is a low level event and is only used in special circumstances.* The button_changed
 event occurs anytime there is a button press or release. This event may be
 accompanied by the higher level events that detect user intention, i.e. clicked,
 double_clicked, etc.
