@@ -38,7 +38,7 @@ Use npm to install the package from the npm repository or directly from the
 git repository. Note that the rpi-gpio dependency may have special requirements
 that need to be met during installation.
 
-`npm install rpio-gpio-buttons`
+`npm install rpi-gpio-buttons`
 
 
 ## Usage
