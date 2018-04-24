@@ -39,6 +39,8 @@ module.exports = function (pins, options) {
   pins.forEach(function (pin) {
     buttonSetup(pin);
   });
+  
+  gpio.setMode(gpio.MODE_BCM);
 
   // watch for gpio change events
   gpio.on('change', gpioChange);
