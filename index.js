@@ -25,7 +25,7 @@ const PRESSED_MS = 200;
 const CLICKED_MS = 200;
 
 // pins should be an array of integers for each gpio header pin
-module.exports = function (pins, options) {
+var rpi_gpio_buttons = function (pins, options) {
   options = options || {};
   var emitter = new events.EventEmitter();
   var buttons = {};
@@ -34,6 +34,9 @@ module.exports = function (pins, options) {
     pressed: options.pressed || PRESSED_MS,
     clicked: options.clicked || CLICKED_MS
   };
+  var mode = options.mode || gpio.MODE_RPI;
+
+  gpio.setMode(mode);
 
   // setup each pin as a button input
   pins.forEach(function (pin) {
@@ -189,3 +192,9 @@ module.exports = function (pins, options) {
   emitter.setTiming = setTiming;
   return emitter;
 };
+
+// expose rpi-gpio constants
+rpi_gpio_buttons.MODE_BCM = gpio.MODE_BCM;
+rpi_gpio_buttons.MODE_RPI = gpio.MODE_RPI;
+
+module.exports = rpi_gpio_buttons;

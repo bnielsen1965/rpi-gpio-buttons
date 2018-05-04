@@ -5,7 +5,7 @@ Raspberry Pi GPIO Button Event Emitter
 This is a Node.js package used to generate events from buttons attached to the
 GPIO pins on a Raspberry Pi. The package utilizes
 [rpi-gpio](https://www.npmjs.com/package/rpi-gpio) to setup the user
-specified GPIO pins for input and interupt based monitoring of input changes.
+specified GPIO pins for input and interrupt based monitoring of input changes.
 
 
 The package implements debounce logic to clean up noisy buttons and generates
@@ -42,9 +42,9 @@ that need to be met during installation.
 
 
 ## Usage
-> NOTE: **Pin numbers are the physical numbers from the printed circuit board header**,
-*not* the chip's GPIO number. I.E. When using GPIO17 or BCM17 on a Raspberry Pi
-the header pin number is 11 and GPIO27 or BCM27 is pin number 13.
+> NOTE: **The default mode is MODE_RPI where pin numbers are the physical numbers
+ from the printed circuit board header.**, if you prefer to use the GPIO numbers,
+ I.E. GPIO27, then you must set the mode in the options to MODE_BCM.
 
 Using rpio-gpio-buttons in your application requires two steps, create an
 instance of the rpio-gpio-buttons object using an array of header pin numbers
@@ -103,6 +103,41 @@ button events.
 // create an instance of the rpio-gpio-buttons object with pins 11 and 13
 var buttons = require('rpi-gpio-buttons')([11, 13]);
 ```
+
+#### Options
+Initialization options may include timing options and the pin mode.
+
+#### mode
+The rpi-gpio mode can be selected by setting the *mode* option. The default setting
+is MODE_RPI where the pin numbers are the number of the pin on the circuit board
+header. Alternatively the mode can be set to MODE_BCM to use the chip GPIO numbers,
+I.E. to specify GPIO27 as 27 the mode needs to be set to MODE_BCM.
+
+In the following example GPIO 17 and 27 are used with the mode set to MODE_BCM...
+
+```javascript
+var rpi_gpio_buttons = require('rpi-gpio-buttons');
+var buttons = rpi_gpio_buttons([17, 27], { mode: rpi_gpio_buttons.MODE_BCM });
+
+...
+
+```
+
+#### debounced
+Timing for the debounce can be set in the options using the *debounced* option. The
+value should be an integer that represents the number of milliseconds for the debounce.
+
+
+#### pressed
+The option *pressed* sets the timing for detection of a pressed event. An integer
+for the number of milliseconds before a closed button results in a pressed event.
+
+
+#### clicked
+A clicked event is timed by the *clicked* option where the number of milliseconds
+is specified for the clicked detection after the button is released.
+
+
 
 ### Set Timing
 **setTiming(options)**
