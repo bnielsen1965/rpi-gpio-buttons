@@ -23,6 +23,6 @@
   "author": "Bryan Nielsen <bnielsen1965@gmail.com> (https://github.com/bnielsen1965)",
   "license": "MIT",
   "dependencies": {
-    "rpi-gpio": "^0.9.1"
+    "rpi-gpio": "^2.1.3"
   }
 }
