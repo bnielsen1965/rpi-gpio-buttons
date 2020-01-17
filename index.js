@@ -6,6 +6,7 @@
 //
 // Inputs are assumed to be pull up with a normally open button. When a button
 // is pressed it should take the gpio pin low.
+// Set the usePullUp option to false for circuits with a pull down setup.
 
 /*jshint esversion: 6*/
 
@@ -35,6 +36,7 @@ var rpi_gpio_buttons = function (pins, options) {
     clicked: options.clicked || CLICKED_MS
   };
   var mode = options.mode || gpio.MODE_RPI;
+  var usePullUp = (typeof(options.usePullUp) === "undefined" ? true : !!options.usePullUp);
 
   gpio.setMode(mode);
 
@@ -48,10 +50,11 @@ var rpi_gpio_buttons = function (pins, options) {
 
   // process gpio change event
   function gpioChange(pin, value) {
+    value = (usePullUp ? !value : value); // invert for pull up
     // check if pin is a button and is not in init state
     if (buttons[pin] && STATE_INIT !== buttons[pin].state) {
       // track the last seen value for this button
-      buttons[pin].last = !value; // invert for pull up
+      buttons[pin].last = value;
       // if button is not in debounce mode then start debounce
       if (!buttons[pin].debounce) {
         debounceStart(pin, value);
@@ -62,7 +65,7 @@ var rpi_gpio_buttons = function (pins, options) {
   // start the debounce process on a button press / release
   function debounceStart(pin, value) {
     // track the current value and start the debounce
-    buttons[pin].value = !value; // invert for pull up
+    buttons[pin].value = value;
     buttons[pin].debounce = true;
     setTimeout(function () { debounceComplete(pin); }, timing.debounce);
   }
@@ -171,11 +174,12 @@ var rpi_gpio_buttons = function (pins, options) {
     // setup gpio pin for button use
     gpio.setup(pin, gpio.DIR_IN, gpio.EDGE_BOTH, function () {
       // get the current button state
-      gpio.read(pin, function (err, val) {
+      gpio.read(pin, function (err, value) {
+        value = (usePullUp ? !value : value);
         if (err) console.log('ERR: ', err);
         else {
-          buttons[pin].value = !val;
-          buttons[pin].state = (!val ? STATE_PRESSED : STATE_IDLE);
+          buttons[pin].value = value;
+          buttons[pin].state = (value ? STATE_PRESSED : STATE_IDLE);
         }
       });
     });

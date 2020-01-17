@@ -25,12 +25,11 @@ the need to work out input timing issues or trying to determine user intent.
 
 
 ## Hardware Notes
-GPIO pins with buttons must have a pull up resistor or be configured in the
-device tree overlay to use internal pull up.
+The default configuration assumes button pressed pulls the GPIO pin low and button 
+released pulls the GPIO pin high.
 
-
-Buttons must use normally open contacts and pull the GPIO pin low when the
-button is pressed.
+This can be changed with the usePullUp option to enable buttons that pull high when 
+pressed and pull low when released.
 
 
 ## Install
@@ -105,9 +104,25 @@ var buttons = require('rpi-gpio-buttons')([11, 13]);
 ```
 
 #### Options
-Initialization options may include timing options and the pin mode.
+Include an options arguement to override the default configuration settings.
 
-#### mode
+
+##### usePullUp
+The default configuration assumes pull up on the GPIO pins and normally open 
+button contacts that pull low when pressed. If your circuit uses a pull low 
+when the button is released and pull high when button is pressed then set the 
+usePullUp option to false to disable the default pull up state.
+
+```javascript
+var rpi_gpio_buttons = require('rpi-gpio-buttons');
+var buttons = rpi_gpio_buttons([17, 27], { usePullUp: false });
+
+...
+
+```
+
+
+##### mode
 The rpi-gpio mode can be selected by setting the *mode* option. The default setting
 is MODE_RPI where the pin numbers are the number of the pin on the circuit board
 header. Alternatively the mode can be set to MODE_BCM to use the chip GPIO numbers,
@@ -123,17 +138,17 @@ var buttons = rpi_gpio_buttons([17, 27], { mode: rpi_gpio_buttons.MODE_BCM });
 
 ```
 
-#### debounced
-Timing for the debounce can be set in the options using the *debounced* option. The
+##### debounce
+Timing for the debounce can be set in the options using the *debounce* option. The
 value should be an integer that represents the number of milliseconds for the debounce.
 
 
-#### pressed
+##### pressed
 The option *pressed* sets the timing for detection of a pressed event. An integer
 for the number of milliseconds before a closed button results in a pressed event.
 
 
-#### clicked
+##### clicked
 A clicked event is timed by the *clicked* option where the number of milliseconds
 is specified for the clicked detection after the button is released.
 
