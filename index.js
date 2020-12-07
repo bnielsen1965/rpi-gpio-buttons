@@ -1,204 +1,103 @@
-// index.js
-// rpi-gpio-buttons
-// Use rpi-gpio to monitor gpio inputs with push buttons.
-// Provides debounce and emits events for pressed, clicked, clicked and
-// pressed, double clicked, and released.
-//
-// Inputs are assumed to be pull up with a normally open button. When a button
-// is pressed it should take the gpio pin low.
-// Set the usePullUp option to false for circuits with a pull down setup.
 
-/*jshint esversion: 6*/
+const RPiGPIO = require('rpi-gpio');
+const EventEmitter = require('events').EventEmitter;
+const ButtonEvents = require('button-events');
 
-const events = require('events');
-const gpio = require('rpi-gpio');
+const Defaults = {
+  pins: [], // array of button pin numbers, MODE_BCM == use gpio numbers, MODE_RPI (default) == use 40 pin header pin number
+  usePullUp: true, // is button input pulled high
+  mode: RPiGPIO.MODE_RPI, // mode to use for rpi-gpio pin numbering
+  timing: {
+    debounce: 30, // 30 ms debounce
+    pressed: 200, // 200 ms in pressed state == button pressed
+    clicked: 200 // 200 ms after released == button clicked
+  }
+};
 
-const STATE_INIT = 0;
-const STATE_IDLE = 1;
-const STATE_PRESSED = 2;
-const STATE_CLICKED = 3;
-const STATE_CLICKED_PRESSED = 4;
-const STATE_DOUBLE_CLICKED = 5;
-const STATE_RELEASE_WAIT = 6;
+class GPIOButtons extends EventEmitter {
+  constructor (Config) {
+    super();
+    this.buttons = {};
+    this.Config = Object.assign({}, Defaults, Config);
+    this.Config.timing = Object.assign({}, Defaults.timing, this.Config.timing);
+  }
 
-const DEBOUNCE_MS = 30;
-const PRESSED_MS = 200;
-const CLICKED_MS = 200;
+  async init (gpio) {
+    this.gpio = gpio || await this.gpioSetup();
+    await this.initListener();
+  }
 
-// pins should be an array of integers for each gpio header pin
-var rpi_gpio_buttons = function (pins, options) {
-  options = options || {};
-  var emitter = new events.EventEmitter();
-  var buttons = {};
-  var timing = {
-    debounce: options.debounce || DEBOUNCE_MS,
-    pressed: options.pressed || PRESSED_MS,
-    clicked: options.clicked || CLICKED_MS
-  };
-  var mode = options.mode || gpio.MODE_RPI;
-  var usePullUp = (typeof(options.usePullUp) === "undefined" ? true : !!options.usePullUp);
-
-  gpio.setMode(mode);
-
-  // setup each pin as a button input
-  pins.forEach(function (pin) {
-    buttonSetup(pin);
-  });
-
-  // watch for gpio change events
-  gpio.on('change', gpioChange);
-
-  // process gpio change event
-  function gpioChange(pin, value) {
-    value = (usePullUp ? !value : value); // invert for pull up
-    // check if pin is a button and is not in init state
-    if (buttons[pin] && STATE_INIT !== buttons[pin].state) {
-      // track the last seen value for this button
-      buttons[pin].last = value;
-      // if button is not in debounce mode then start debounce
-      if (!buttons[pin].debounce) {
-        debounceStart(pin, value);
+  // setup rpi-gpio
+  async gpioSetup () {
+    RPiGPIO.setMode(this.Config.mode);
+    // setup each pin as a button input
+    for (let i = 0; i < this.Config.pins.length; i++) {
+      try {
+        await this.buttonSetup(this.Config.pins[i]);
+      }
+      catch (error) {
+        this.emit('error', `Failed to setup button pin ${this.Config.pins[i]}. ${error.message}`);
       }
     }
+    return RPiGPIO;
   }
 
-  // start the debounce process on a button press / release
-  function debounceStart(pin, value) {
-    // track the current value and start the debounce
-    buttons[pin].value = value;
-    buttons[pin].debounce = true;
-    setTimeout(function () { debounceComplete(pin); }, timing.debounce);
+  // configure the specified pin as a button input
+  buttonSetup (pin) {
+    return new Promise((resolve, reject) => {
+      this.emit('debug', `Setup button pin ${pin}.`);
+      // setup gpio pin for button use
+      RPiGPIO.setup(pin, RPiGPIO.DIR_IN, RPiGPIO.EDGE_BOTH, () => resolve());
+    });
   }
 
-  // complete the debounce process on a button press / release
-  function debounceComplete(pin) {
-    emitter.emit('button_changed', pin);
-    if (buttons[pin].last) {
-      // debounced button press
-      emitter.emit('button_press', pin);
-      switch (buttons[pin].state) {
-        case STATE_CLICKED:
-        // transition from a clicked state to clicked and pressed
-        clearTimeout(buttons[pin].emitTimer);
-        buttons[pin].state = STATE_CLICKED_PRESSED;
-        break;
-
-        default:
-        // begin the pressed state
-        clearTimeout(buttons[pin].emitTimer);
-        buttons[pin].state = STATE_PRESSED;
-        break;
+  // initialize gpio listener for buttons
+  async initListener () {
+    for (let i = 0; i < this.Config.pins.length; i++) {
+      let pin = this.Config.pins[i];
+      try {
+        let value = await this.buttonPreread(pin);
+        let buttonEvents = new ButtonEvents(Object.assign({}, this.Config, { preread: value }));
+        // pass along all pin events
+        buttonEvents
+          .on('button_event', type => {
+            this.emit('button_event', type, pin);
+            this.emit(type, pin);
+          })
+          .on('button_changed', () => this.emit('button_changed', pin))
+          .on('button_press', () => this.emit('button_press', pin))
+          .on('button_release', () => this.emit('button_release', pin));
+        this.buttons[pin] = buttonEvents;
       }
-      // delay to allow for further state transition
-      buttons[pin].emitTimer = setTimeout(function () { emitState(pin); }, timing.pressed);
-    }
-    else {
-      // debounced button release
-      emitter.emit('button_release', pin);
-      switch (buttons[pin].state) {
-        case STATE_PRESSED:
-        // transition from pressed to clicked
-        clearTimeout(buttons[pin].emitTimer);
-        buttons[pin].state = STATE_CLICKED;
-        // delay to allow for further state transition
-        buttons[pin].emitTimer = setTimeout(function () { emitState(pin); }, timing.clicked);
-        break;
-
-        case STATE_CLICKED_PRESSED:
-        // transition from clicked and pressed to double clicked
-        clearTimeout(buttons[pin].emitTimer);
-        buttons[pin].state = STATE_DOUBLE_CLICKED;
-        // no further transitions
-        emitState(pin);
-        break;
-
-        case STATE_RELEASE_WAIT:
-        // transition from release wait to idle by emitting event
-        clearTimeout(buttons[pin].emitTimer);
-        emitState(pin);
-        break;
+      catch (error) {
+        this.emit('error', `Failed preread and button events setup on pin ${pin}. ${error.message}`);
       }
     }
-
-    buttons[pin].debounce = false;
+    // listen for changes on gpio
+    this.gpio.on('change', (pin, value) => {
+      if (!this.buttons[pin]) return;
+      this.buttons[pin].gpioChange(value);
+    });
   }
 
-  // emit event for the current button state
-  function emitState(pin) {
-    switch (buttons[pin].state) {
-      case STATE_PRESSED:
-      // emit event and transition to release wait
-      emitter.emit('pressed', pin);
-      buttons[pin].state = STATE_RELEASE_WAIT;
-      break;
-
-      case STATE_CLICKED:
-      // emit event and transition to idle
-      emitter.emit('clicked', pin);
-      buttons[pin].state = STATE_IDLE;
-      break;
-
-      case STATE_CLICKED_PRESSED:
-      // emit event and transition to release wait
-      emitter.emit('clicked_pressed', pin);
-      buttons[pin].state = STATE_RELEASE_WAIT;
-      break;
-
-      case STATE_DOUBLE_CLICKED:
-      // emit event and transition to idle
-      emitter.emit('double_clicked', pin);
-      buttons[pin].state = STATE_IDLE;
-      break;
-
-      case STATE_RELEASE_WAIT:
-      // emit event and transition to idle
-      emitter.emit('released', pin);
-      buttons[pin].state = STATE_IDLE;
-      break;
-    }
-
-    buttons[pin].emitTimer = null;
-  }
-
-  // configure the specified header pin as a gpio button
-  function buttonSetup(pin) {
-    // create data structure for button state
-    buttons[pin] = {
-      state: STATE_INIT,
-      debounce: false,
-      value: null,
-      last: null,
-      emitTimer: null
-    };
-
-    // setup gpio pin for button use
-    gpio.setup(pin, gpio.DIR_IN, gpio.EDGE_BOTH, function () {
-      // get the current button state
-      gpio.read(pin, function (err, value) {
-        value = (usePullUp ? !value : value);
-        if (err) console.log('ERR: ', err);
-        else {
-          buttons[pin].value = value;
-          buttons[pin].state = (value ? STATE_PRESSED : STATE_IDLE);
-        }
+  // preread button state before starting listener
+  buttonPreread (pin) {
+    return new Promise((resolve, reject) => {
+      this.emit('debug', `Preread button pin ${pin}.`);
+      RPiGPIO.read(pin, (error, value) => {
+        if (error) reject(new Error(error));
+        else resolve(value);
       });
     });
   }
 
-  // set new timing values for button events
-  function setTiming(options) {
-    timing.debounce = options.debounce || timing.debounce;
-    timing.pressed = options.pressed || timing.pressed;
-    timing.clicked = options.clicked || timing.clicked;
+  destroy () {
+    this.gpio.destroy();
   }
 
-  // export functions
-  emitter.setTiming = setTiming;
-  return emitter;
 };
 
-// expose rpi-gpio constants
-rpi_gpio_buttons.MODE_BCM = gpio.MODE_BCM;
-rpi_gpio_buttons.MODE_RPI = gpio.MODE_RPI;
+GPIOButtons.MODE_BCM = RPiGPIO.MODE_BCM;
+GPIOButtons.MODE_RPI = RPiGPIO.MODE_RPI;
 
-module.exports = rpi_gpio_buttons;
+module.exports = GPIOButtons;
