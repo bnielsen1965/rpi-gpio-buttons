@@ -92,7 +92,10 @@ class GPIOButtons extends EventEmitter {
   }
 
   destroy () {
-    this.gpio.destroy();
+    Object.keys(this.buttons).forEach(be => this.buttons[be].cleanup());
+    this.gpio.destroy(error => {
+      if (error) this.emit('error', error);
+    });
   }
 
 };

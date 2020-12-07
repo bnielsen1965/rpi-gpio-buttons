@@ -40,6 +40,11 @@ function userClickedDown () {
 }
 
 buttons.init()
+.then(() => {
+  setTimeout(() => {
+    buttons.destroy();
+  }, 5000);
+})
 .catch(error => {
   console.log('ERROR', error.stack);
   process.exit(1);
