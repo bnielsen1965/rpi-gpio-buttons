@@ -146,7 +146,7 @@ setupPin(PIN_UP)
   // use preconfigured rpi-gpio in new rpi-gpio-buttons
   let buttons = new RPiGPIOButtons({ pins: [PIN_UP, PIN_DOWN], gpio: RPiGPIO });
   buttons
-  .on('clicked', function (pin) {
+  .on('clicked', pin => {
     switch(pin) {
       case PIN_UP:
       console.log('UP');
@@ -222,7 +222,8 @@ to override each timing parameter.
 
 # Events
 
-The package provides a variety of high level button events to which an application can bind.
+The package provides a variety of high level button events to which an application can
+bind. Each event will include the pin number to which the event is associated.
 
 Possible events include the following...
 
@@ -248,8 +249,8 @@ The pressed event is emitted when a button is pressed and held down. This will e
 be followed with a released event when the button is released.
 
 ```javascript
-buttons.on('pressed', function () {
-  console.log('User pressed button.');
+buttons.on('pressed', pin => {
+  console.log(`User pressed button ${pin}.`);
 });
 ```
 
@@ -260,8 +261,8 @@ When a button is pressed and released rapidly this is interpreted as a click and
 in the emit of the clicked event.
 
 ```javascript
-buttons.on('clicked', function () {
-  console.log('User clicked button.');
+buttons.on('clicked', pin => {
+  console.log(`User clicked button ${pin}.`);
 });
 ```
 
@@ -273,8 +274,8 @@ then a clicked_pressed event will be emitted. Eventually when the button is rele
 then a released event will be emitted.
 
 ```javascript
-buttons.on('clicked_pressed', function () {
-  console.log('User clicked then pressed button.');
+buttons.on('clicked_pressed', pin => {
+  console.log(`User clicked then pressed button ${pin}.`);
 });
 ```
 
@@ -285,8 +286,8 @@ If a clicked event is immediately followed with another clicked detection then i
 interpreted as a double click and a double_clicked event is emitted.
 
 ```javascript
-buttons.on('double_clicked', function () {
-  console.log('User double clicked button.');
+buttons.on('double_clicked', pin => {
+  console.log(`User double clicked button ${pin}.`);
 });
 ```
 
@@ -298,8 +299,8 @@ it will wait for the user to release the pressed button. When this happens the r
 event is emitted.
 
 ```javascript
-buttons.on('released', function () {
-  console.log('User released button.');
+buttons.on('released', pin => {
+  console.log(`User released button ${pin}.`);
 });
 ```
 
@@ -312,14 +313,14 @@ the *'button_event'* include *'pressed'*, *'clicked'*, *'clicked_pressed'*, *'do
 and *'released'*.
 
 ```javascript
-button.on('button_event', (type) => {
+button.on('button_event', (type, pin) => {
   switch (type) {
     case 'clicked':
-    console.log('User clicked.');
+    console.log(`User clicked ${pin}.`);
     break;
 
     case 'double_clicked':
-    console.log('User double clicked.');
+    console.log(`User double clicked ${pin}.`);
     break;
   }
 });
