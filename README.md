@@ -8,7 +8,7 @@ the buttons. Possible button events include *'clicked'*, *'double_clicked'*, *'p
 from a single button input.
 
 The package utilizes [rpi-gpio](https://www.npmjs.com/package/rpi-gpio) to monitor the
-GPIO pins for button signals and the [https://www.npmjs.com/package/button-events] module
+GPIO pins for button signals and the [button-events](https://www.npmjs.com/package/button-events) module
 to convert those signals into user events.
 
 
@@ -186,7 +186,7 @@ Default value: true
 
 Possible value: true or false
 
-The *usePullUp* boolean is passed to the [https://www.npmjs.com/package/button-events] module
+The *usePullUp* boolean is passed to the [button-events](https://www.npmjs.com/package/button-events) module
 and is used to determine the expected signal value when the button is pressed and when
 it is released.
 
