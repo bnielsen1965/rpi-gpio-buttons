@@ -69,6 +69,60 @@ buttons
 For a simple working example see the [test script](test/).
 
 
+# Class Methods
+
+When using the rpi-gpio-buttons class there are only three methods that an application
+will normally deal with, the constructor() when creating a new instance, the on() method
+to attach event listeners, and the init() method which asynchronously initializes the
+rpi-gpio-buttons instance.
+
+
+## constructor(config)
+
+The constructor() method is called when a new instance of rpi-gpio-buttons is created.
+A configuration object must be passed into the constructor to configure the GPIO pins
+used in rpi-gpio and the event logic used in button-events.
+
+The default configuration settings may be acceptable in many cases, however, the configuration
+**must include** the *pins* array that defines the GPIO pins used for button inputs.
+```javascript
+// the pins setting is required!
+let buttons = new RPiGPIOButtons({ pins: [17, 18, 27] });
+```
+
+
+## async init([gpio])
+
+After creating an rpi-gpio-buttons instance the asynchronous init() method must be
+called to intialize rpi-gpio, the GPIO listener and the button event logic. Once the
+init() method resolves the button events will become active.
+
+If the application has already configured rpi-gpio for the button GPIO pins then it
+can be passed to the init() method as an argument and the rpi-gpio-buttons initialization
+sequence will skip the rpi-gpio setup and only setup the GPIO listener and button events.
+```javascript
+// somewhere in your code you configure rpi-gpio
+let my_rpi_gpio = getRPiGPIO();
+// create an rpi-gpio-buttons instance
+let buttons = new RPiGPIOButtons({ pins: [17, 18, 27] });
+// asynchronously initialize buttons with the pre-configured rpi-gpio instance
+buttons.init(my_rpi_gpio)
+.then(() => {
+  console.log('buttons is initialized, events are active')
+})
+.catch(error => {
+  console.log(`An error occured during buttons init(). ${error.message}`);
+});
+```
+
+
+## on(event, handler)
+
+As with any event emitter a number of listeners can be attached to the rpi-gpio-buttons
+instance to listen for events when the user interacts with a button. See the event types
+below for more detail.
+
+
 # Configuration
 
 When creating a new instance of rpi-gpio-buttons the constructor must be provided a
@@ -164,7 +218,7 @@ setupPin(PIN_UP)
   });
   // initialize the rpi-gpio-buttons instance to start listener and events
   buttons
-  .init()
+  .init(RPiGPIO)
   .catch(error => {
     console.log('ERROR', error.stack);
     process.exit(1);
@@ -174,7 +228,7 @@ setupPin(PIN_UP)
 // asynchronous function to setup rpi-gpio pin for a button input
 function setupPin (pin) {
   return new Promise((resolve, reject) => {
-    RPiGPIO.setup(PIN_UP, RPiGPIO.DIR_IN, RPiGPIO.EDGE_BOTH, resolve);
+    RPiGPIO.setup(pin, RPiGPIO.DIR_IN, RPiGPIO.EDGE_BOTH, resolve);
   });
 }
 ```

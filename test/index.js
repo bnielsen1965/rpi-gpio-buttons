@@ -1,5 +1,5 @@
 
-const RPiGPIOButtons = require('../index.js');
+const RPiGPIOButtons = require('../index.js'); // normally this would be require('rpi-gpio-buttons');
 const PIN_UP = 17;
 const PIN_DOWN = 27;
 
