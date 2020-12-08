@@ -66,6 +66,8 @@ buttons
   });
 ```
 
+For a simple working example see the [test script](test/).
+
 
 # Configuration
 
@@ -218,6 +220,21 @@ various button events.
 
 One or more of the timing settings can be passed into the rpi-gpio-buttons constructor
 to override each timing parameter.
+
+
+## Disable debounce
+
+If a debounce circuit or algorithm has already been applied to the button signal then
+it may be desirable to disable the redundant debounce logic in the button-events module.
+Setting the timing.debounce value to 0 will disable the debounce logic.
+```javascript
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+// set the timing debounce value to 0 so debounce is disabled
+let buttons = new RPiGPIOButtons({
+  pins: [17, 18, 27],
+  timing: { debounce: 0 }
+});
+```
 
 
 # Events
