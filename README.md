@@ -212,7 +212,7 @@ Default:
 }
 ```
 
-The timing settings are passed to the [https://www.npmjs.com/package/button-events] module
+The timing settings are passed to the [button-events](https://www.npmjs.com/package/button-events) module
 and are used to configure the signal debounce and the timing logic used to trigger the
 various button events.
 
