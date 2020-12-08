@@ -3,11 +3,8 @@ const RPiGPIOButtons = require('../index.js');
 const PIN_UP = 17;
 const PIN_DOWN = 27;
 
-//let buttons = RPiGPIOButtons([11, 13]);
-let buttons = new RPiGPIOButtons({
-  pins: [17, 27],
-  mode: RPiGPIOButtons.MODE_BCM
-});
+
+let buttons = new RPiGPIOButtons({ pins: [PIN_UP, PIN_DOWN] });
 
 buttons
 .on('error', error => {
@@ -43,7 +40,7 @@ buttons.init()
 .then(() => {
   setTimeout(() => {
     buttons.destroy();
-  }, 5000);
+  }, 30000);
 })
 .catch(error => {
   console.log('ERROR', error.stack);

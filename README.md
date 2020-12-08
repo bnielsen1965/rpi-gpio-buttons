@@ -1,280 +1,359 @@
 Raspberry Pi GPIO Button Event Emitter
 ======================================
 
-## Application
-This is a Node.js package used to generate events from buttons attached to the
-GPIO pins on a Raspberry Pi. The package utilizes
-[rpi-gpio](https://www.npmjs.com/package/rpi-gpio) to setup the user
-specified GPIO pins for input and interrupt based monitoring of input changes.
+The rpi-gpio-buttons module is used to develop a rich user interface from simple
+button inputs by generating events based on the timing of user interactions with
+the buttons. Possible button events include *'clicked'*, *'double_clicked'*, *'pressed'*,
+*'released'*, and *'clicked_pressed'*. Complex application interactions can be developed
+from a single button input.
+
+The package utilizes [rpi-gpio](https://www.npmjs.com/package/rpi-gpio) to monitor the
+GPIO pins for button signals and the [https://www.npmjs.com/package/button-events] module
+to convert those signals into user events.
 
 
-The package implements debounce logic to clean up noisy buttons and generates
-a variety of high level button event types (i.e. 'clicked', 'double_clicked')
-based on detailed monitoring of button transition states.
+# Usage
+
+To utilize rpi-gpio-buttons you will need the hardware, i.e. a Raspberry Pi with
+buttons attached to the GPIO inputs, and Node.js to develop your application.
+
+1) Install the module as a dependency in your application...
+> npm install --save rpi-gpio-buttons
+
+2) In your application load the module and create a configured instance...
+```javascript
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+let buttons = new RPiGPIOButtons({
+  mode: RPiGPIOButtons.MODE_BCM, // set BCM mode to use GPIO numbers
+  pins: [17, 27]                 // use GPIO 17 and 27 for buttons
+});
+```
+
+3) Add listeners to the new instance and watch for button events...
+```javascript
+buttons
+  .on('clicked', pin => {
+    switch(pin) {
+      case 17:
+      buttonUp();
+      break;
+
+      case 27:
+      buttonDown();
+      break;
+    }
+  })
+  .on('double_clicked', pin => {
+    switch(pin) {
+      case 17:
+      buttonBack();
+      break;
+
+      case 27:
+      buttonForward();
+      break;
+    }
+  })
+```
+
+4) Initialize the new instance to start monitoring the buttons...
+```javascript
+buttons
+  .init()
+  .catch(error => {
+    console.log('ERROR', error.stack);
+    process.exit(1);
+  });
+```
 
 
-Hardware applications with physical buttons can therefore utilize this package
-to implement event based user interactions in the application layer without
-the need to work out input timing issues or trying to determine user intent.
+# Configuration
+
+When creating a new instance of rpi-gpio-buttons the constructor must be provided a
+configuration object which includes at a minimum the *pins* array for the GPIO pins
+to which buttons are attached.
+```javascript
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+// minimal configuration must include array of pins, example is one button on GPIO 17
+let buttons = new RPiGPIOButtons({ pins: [17] });
+```
+
+Optional configuration parameters can be included to control the behavior of the rpi-gpio-buttons
+instance. The configuration parameters are as follows...
 
 
-## Requirements
-* Raspberry Pi (with buttons on GPIO pins)
-* Node.js runtime
-* rpi-gpio package (has additional dependencies, check project page)
+## mode
+
+**(optional)**
+
+Default value: MODE_BCM
+
+Possible value: MODE_BCM or MODE_RPI
+
+The pin mode to be used in the rpi-gpio module. This determines how the pin numbers are
+named. In MODE_BCM the pin numbers are based on GPIO names, i.e. GPIO27 is pin 27. In
+MODE_RPI the pin numbers are based on the Raspberry Pi 40 pin header pin numbers, i.e.
+header pin number 11 is pin 11.
+
+The mode constants can be used from the rpi-gpio library or from the rpi-gpio-buttons
+library...
+```javascript
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+// these two instances are using the same pin which is referenced in a different mode
+let buttonsBCM = new RPiGPIOButtons({ mode: RPiGPIOButtons.MODE_BCM, pins: [11] });
+let buttonsRPI = new RPiGPIOButtons({ mode: RPiGPIOButtons.MODE_RPI, pins: [17] });
+```
 
 
-## Hardware Notes
-The default configuration assumes button pressed pulls the GPIO pin low and button 
-released pulls the GPIO pin high.
+## pins
 
-This can be changed with the usePullUp option to enable buttons that pull high when 
-pressed and pull low when released.
+**(required)**
 
-
-## Install
-Use npm to install the package from the npm repository or directly from the
-git repository. Note that the rpi-gpio dependency may have special requirements
-that need to be met during installation.
-
-`npm install rpi-gpio-buttons`
+An array of pin numbers, either GPIO or header pin number depending on
+the rpi-gpio mode selected.
+```javascript
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+// create events for buttons on GPIO17, GPIO18, and GPIO27
+let buttons = new RPiGPIOButtons({ pins: [17, 18, 27] });
+```
 
 
-## Usage
-> NOTE: **The default mode is MODE_RPI where pin numbers are the physical numbers
- from the printed circuit board header.**, if you prefer to use the GPIO numbers,
- I.E. GPIO27, then you must set the mode in the options to MODE_BCM.
+## gpio
 
-Using rpio-gpio-buttons in your application requires two steps, create an
-instance of the rpio-gpio-buttons object using an array of header pin numbers
-and then bind to the desired button events that you expect to use in your user
-interface.
+**(optional)**
+
+Default value: undefined
+
+Possible value: rpi-gpio instance
+
+If the rpi-gpio library is already loaded and the GPIO pins for the buttons are configured
+then it can be passed in the *gpio* field and the rpi-gpio-buttons module will skip
+the GPIO setup during initialization and only setup the GPIO listener and the button
+event emitter.
+```javascript
+const RPiGPIO = require('rpi-gpio');
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+const PIN_UP = 17;
+const PIN_DOWN = 27;
+
+// configure rpi-gpio before creating rpi-gpio-buttons instance
+RPiGPIO.setMode(RPiGPIO.MODE_BCM);
+setupPin(PIN_UP)
+.then(() => {
+  return setupPin(PIN_DOWN);
+})
+.then(() => {
+  // use preconfigured rpi-gpio in new rpi-gpio-buttons
+  let buttons = new RPiGPIOButtons({ pins: [PIN_UP, PIN_DOWN], gpio: RPiGPIO });
+  buttons
+  .on('clicked', function (pin) {
+    switch(pin) {
+      case PIN_UP:
+      console.log('UP');
+      break;
+
+      case PIN_DOWN:
+      console.log('DOWN');
+      break;
+    }
+  })
+  .on('button_event', (type, pin) => {
+    console.log(`button_event ${type} on ${pin}`)
+  });
+  // initialize the rpi-gpio-buttons instance to start listener and events
+  buttons
+  .init()
+  .catch(error => {
+    console.log('ERROR', error.stack);
+    process.exit(1);
+  });
+});
+
+// asynchronous function to setup rpi-gpio pin for a button input
+function setupPin (pin) {
+  return new Promise((resolve, reject) => {
+    RPiGPIO.setup(PIN_UP, RPiGPIO.DIR_IN, RPiGPIO.EDGE_BOTH, resolve);
+  });
+}
+```
 
 
-i.e. Assuming we have two buttons wired to pins 11 and 13 of the GPIO header
-and we have labeled the button on pin 11 as "Up" and pin 13 as "Down" on the
-user interface, we may have the following code...
+## usePullUp
+
+**(optional)**
+
+Default value: true
+
+Possible value: true or false
+
+The *usePullUp* boolean is passed to the [https://www.npmjs.com/package/button-events] module
+and is used to determine the expected signal value when the button is pressed and when
+it is released.
+
+When *usePullUp* is true it is assumed that the button input has a pull up resistor and
+and normally open button switch that will produce a value of 0 when the button is pressed
+and a value of 1 when the button is released.
+
+If a pull down resistor is used in the circuit, or the button hardware is normally closed,
+then a *usePullUp* setting of false will assume that a button press value is 1 and the
+button release value is 0.
+
+
+## timing
+
+**(optional)**
+
+Default:
+```javascript
+{
+  debounce: 30, // 30 ms debounce
+  pressed: 200, // 200 ms in pressed state == button pressed
+  clicked: 200 // 200 ms after released == button clicked
+}
+```
+
+The timing settings are passed to the [https://www.npmjs.com/package/button-events] module
+and are used to configure the signal debounce and the timing logic used to trigger the
+various button events.
+
+One or more of the timing settings can be passed into the rpi-gpio-buttons constructor
+to override each timing parameter.
+
+
+# Events
+
+The package provides a variety of high level button events to which an application can bind.
+
+Possible events include the following...
+
+**Events that indicate user intent**
+- pressed
+- clicked
+- clicked_pressed
+- double_clicked
+- released
+
+**Unified event for user intent, passes the user event state**
+- button_event
+
+**Low level events**
+- button_changed
+- button_press
+- button_release
+
+
+## pressed
+
+The pressed event is emitted when a button is pressed and held down. This will eventually
+be followed with a released event when the button is released.
 
 ```javascript
-// create an instance of the rpio-gpio-buttons object with pins 11 and 13
-var buttons = require('rpi-gpio-buttons')([11, 13]);
+buttons.on('pressed', function () {
+  console.log('User pressed button.');
+});
+```
 
-// bind to the clicked event and check for the assigned pins when clicked
-buttons.on('clicked', function (pin) {
-  switch(pin) {
-    // Up button on pin 11 was clicked
-    case 11:
-    userClickedUp();
-    break
 
-    // Down button on pin 13 was clicked
-    case 13:
-    userClickedDown();
+## clicked
+
+When a button is pressed and released rapidly this is interpreted as a click and results
+in the emit of the clicked event.
+
+```javascript
+buttons.on('clicked', function () {
+  console.log('User clicked button.');
+});
+```
+
+
+## clicked_pressed
+
+If a clicked event is detected and quickly followed by pressing and holding the button
+then a clicked_pressed event will be emitted. Eventually when the button is released
+then a released event will be emitted.
+
+```javascript
+buttons.on('clicked_pressed', function () {
+  console.log('User clicked then pressed button.');
+});
+```
+
+
+## double_clicked
+
+If a clicked event is immediately followed with another clicked detection then it is
+interpreted as a double click and a double_clicked event is emitted.
+
+```javascript
+buttons.on('double_clicked', function () {
+  console.log('User double clicked button.');
+});
+```
+
+
+## released
+
+When one of the pressed type events is generated the button is placed in a state where
+it will wait for the user to release the pressed button. When this happens the released
+event is emitted.
+
+```javascript
+buttons.on('released', function () {
+  console.log('User released button.');
+});
+```
+
+
+## button_event
+
+The button_event event is a unified event triggered in combination with the user intent
+events and will pass the value of the user intent as an argument. The types passed in
+the *'button_event'* include *'pressed'*, *'clicked'*, *'clicked_pressed'*, *'double_clicked'*,
+and *'released'*.
+
+```javascript
+button.on('button_event', (type) => {
+  switch (type) {
+    case 'clicked':
+    console.log('User clicked.');
+    break;
+
+    case 'double_clicked':
+    console.log('User double clicked.');
     break;
   }
 });
-
-
-function userClickedUp() {
-  // do something here for up button
-  console.log('UP');
-}
-
-
-function userClickedDown() {
-  // do something here for down button
-  console.log('DOWN');
-}
 ```
 
 
-## API
+## button_changed
 
-### Initialization
-**require('rpi-gpio-buttons')([pin number, pin number, ...], {options})**
-
-The rpi-gpio-buttons package exports a function and the function accepts an
-array of integers with each integer being the pin number on the GPIO header.
-An optional second parameter can be included to set custom timing values for
-button events.
-
-```javascript
-// create an instance of the rpio-gpio-buttons object with pins 11 and 13
-var buttons = require('rpi-gpio-buttons')([11, 13]);
-```
-
-#### Options
-Include an options arguement to override the default configuration settings.
+This is a low level event and is only used in special circumstances. The button_changed
+event occurs anytime there is a button press or release. This event may be accompanied
+by the higher level events that detect user intention, i.e. clicked, double_clicked, etc.
 
 
-##### usePullUp
-The default configuration assumes pull up on the GPIO pins and normally open 
-button contacts that pull low when pressed. If your circuit uses a pull low 
-when the button is released and pull high when button is pressed then set the 
-usePullUp option to false to disable the default pull up state.
+## button_press
 
-```javascript
-var rpi_gpio_buttons = require('rpi-gpio-buttons');
-var buttons = rpi_gpio_buttons([17, 27], { usePullUp: false });
-
-...
-
-```
+This is a low level event and is only used in special circumstances. When the user presses
+a button the button_press event will occur. This may be accompanied by other high level
+events that detect user intent.
 
 
-##### mode
-The rpi-gpio mode can be selected by setting the *mode* option. The default setting
-is MODE_RPI where the pin numbers are the number of the pin on the circuit board
-header. Alternatively the mode can be set to MODE_BCM to use the chip GPIO numbers,
-I.E. to specify GPIO27 as 27 the mode needs to be set to MODE_BCM.
+## button_release
 
-In the following example GPIO 17 and 27 are used with the mode set to MODE_BCM...
-
-```javascript
-var rpi_gpio_buttons = require('rpi-gpio-buttons');
-var buttons = rpi_gpio_buttons([17, 27], { mode: rpi_gpio_buttons.MODE_BCM });
-
-...
-
-```
-
-##### debounce
-Timing for the debounce can be set in the options using the *debounce* option. The
-value should be an integer that represents the number of milliseconds for the debounce.
+This is a low level event and is only used in special circumstances. A button_release
+event occurs whenever the user releases a button. This may be accompanied by other high
+level events that detect user intent.
 
 
-##### pressed
-The option *pressed* sets the timing for detection of a pressed event. An integer
-for the number of milliseconds before a closed button results in a pressed event.
+## error
+
+The error event is used to signal non-throwable errors that may occur during initialization
+or operation of the rpi-gpio-buttons module.
 
 
-##### clicked
-A clicked event is timed by the *clicked* option where the number of milliseconds
-is specified for the clicked detection after the button is released.
+## debug
 
-
-
-### Set Timing
-**setTiming(options)**
-
-Timing options can be adjusted after initialization with the setTiming method.
-This makes it possible to adjust button event timing without reintializing the
-button module.
-
-```javascript
-var buttons = require('rpi-gpio-buttons')([11, 13]);
-
-// set 400ms timing value for pressed event
-buttons.setTiming({ pressed: 400 });
-```
-
-
-#### Timing
-Button events are determined by a set of timing values that control the
-amount of time between a button press, release, and any follow up actions.
-The values can be adjusted from a rapid button click to a more relaxed click.
-
-Optional timing values may be passed to the module on initialization or later
-using the setTiming() method. Timing options include the following values...
-
-##### debounce
-The number of milliseconds to allow the input to settle before acting on
-changes to the input.
-
-##### pressed
-Milliseconds to wait after a button is pressed before settling on a pressed
-type event.
-
-##### clicked
-Milliseconds to wait after a button is released before settling on a clicked
-type event.
-
-
-### Events
-The package provides a variety of high level button events to which an
-application can bind. Each event that is emitted includes the pin number that
-generated the event.
-
-**on(event, callback)**
-
-Possible events include the following...
-* pressed
-* clicked
-* clicked_pressed
-* double_clicked
-* released
-* button_changed
-* button_press
-* button_release
-
-
-#### pressed
-The pressed event is emitted when a button is pressed and held down. This will
-eventually be followed with a released event when the button is released.
-
-```javascript
-buttons.on('pressed', function (pin) {
-  console.log('User pressed button on pin ', pin);
-});
-```
-
-#### clicked
-When a button is pressed and released rapidly this is interpreted as a click and
-results in the emit of the clicked event.
-
-```javascript
-buttons.on('clicked', function (pin) {
-  console.log('User clicked button on pin ', pin);
-});
-```
-
-#### clicked_pressed
-If a clicked event is detected and quickly followed by pressing and holding the
-button then a clicked_pressed event will be emitted. Eventually when the button
-is released then a released event will be emitted.
-
-```javascript
-buttons.on('clicked_pressed', function (pin) {
-  console.log('User clicked then pressed button on pin ', pin);
-});
-```
-
-#### double_clicked
-If a clicked event is immediately followed with another clicked detection then
-it is interpreted as a double click and a double_clicked event is emitted.
-
-```javascript
-buttons.on('double_clicked', function (pin) {
-  console.log('User double clicked button on pin ', pin);
-});
-```
-
-#### released
-When one of the pressed type events is generated the button is placed in a
-state where it will wait for the user to release the pressed button. When this
-happens the released event is emitted.
-
-```javascript
-buttons.on('released', function (pin) {
-  console.log('User released button on pin ', pin);
-});
-```
-
-
-#### button_changed
-*This is a low level event and is only used in special circumstances.* The button_changed
-event occurs anytime there is a button press or release. This event may be
-accompanied by the higher level events that detect user intention, i.e. clicked,
-double_clicked, etc.
-
-
-#### button_press
-*This is a low level event and is only used in special circumstances.* When the user
-presses a button the button_press event will occur. This may be accompanied by
-other high level events that detect user intent.
-
-
-#### button_release
-*This is a low level event and is only used in special circumstances.* A button_release
-event occurs whenever the user releases a button. This may be accompanied by
-other high level events that detect user intent.
+During initialization *debug* events will be emitted that can be used to assist in trouble
+diagnosis during development and operation.

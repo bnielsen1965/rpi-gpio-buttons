@@ -4,9 +4,9 @@ const EventEmitter = require('events').EventEmitter;
 const ButtonEvents = require('button-events');
 
 const Defaults = {
+  mode: RPiGPIO.MODE_BCM, // mode to use for rpi-gpio pin numbering
   pins: [], // array of button pin numbers, MODE_BCM == use gpio numbers, MODE_RPI (default) == use 40 pin header pin number
   usePullUp: true, // is button input pulled high
-  mode: RPiGPIO.MODE_RPI, // mode to use for rpi-gpio pin numbering
   timing: {
     debounce: 30, // 30 ms debounce
     pressed: 200, // 200 ms in pressed state == button pressed
@@ -23,12 +23,14 @@ class GPIOButtons extends EventEmitter {
   }
 
   async init (gpio) {
+    this.emit('debug', 'Initialize rpi-gpio-buttons.');
     this.gpio = gpio || await this.gpioSetup();
     await this.initListener();
   }
 
   // setup rpi-gpio
   async gpioSetup () {
+    this.emit('debug', 'Setup rpi-gpio.');
     RPiGPIO.setMode(this.Config.mode);
     // setup each pin as a button input
     for (let i = 0; i < this.Config.pins.length; i++) {
@@ -55,6 +57,7 @@ class GPIOButtons extends EventEmitter {
   async initListener () {
     for (let i = 0; i < this.Config.pins.length; i++) {
       let pin = this.Config.pins[i];
+      this.emit('debug', `Initialize listener for button pin ${pin}.`);
       try {
         let value = await this.buttonPreread(pin);
         let buttonEvents = new ButtonEvents(Object.assign({}, this.Config, { preread: value }));
@@ -74,6 +77,7 @@ class GPIOButtons extends EventEmitter {
       }
     }
     // listen for changes on gpio
+    this.emit('debug', `Listen for changes to gpio pins.`);
     this.gpio.on('change', (pin, value) => {
       if (!this.buttons[pin]) return;
       this.buttons[pin].gpioChange(value);
@@ -92,6 +96,7 @@ class GPIOButtons extends EventEmitter {
   }
 
   destroy () {
+    this.emit('debug', 'destroy() called.');
     Object.keys(this.buttons).forEach(be => this.buttons[be].cleanup());
     this.gpio.destroy(error => {
       if (error) this.emit('error', error);
