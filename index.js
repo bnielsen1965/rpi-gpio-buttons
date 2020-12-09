@@ -1,10 +1,13 @@
 
-const RPiGPIO = require('rpi-gpio');
 const EventEmitter = require('events').EventEmitter;
 const ButtonEvents = require('button-events');
 
+// gpio modes from rpi-gpio
+const MODE_BCM = 'mode_bcm';
+const MODE_RPI = 'mode_rpi';
+
 const Defaults = {
-  mode: RPiGPIO.MODE_BCM, // mode to use for rpi-gpio pin numbering
+  mode: MODE_BCM, // mode to use for rpi-gpio pin numbering
   pins: [], // array of button pin numbers, MODE_BCM == use gpio numbers, MODE_RPI (default) == use 40 pin header pin number
   usePullUp: true, // is button input pulled high
   timing: {
@@ -22,16 +25,24 @@ class GPIOButtons extends EventEmitter {
     this.Config.timing = Object.assign({}, Defaults.timing, this.Config.timing);
   }
 
-  async init (gpio) {
+  async init () {
     this.emit('debug', 'Initialize rpi-gpio-buttons.');
-    this.gpio = gpio || await this.gpioSetup();
+    this.gpio = this.Config.gpio || this.gpioSetup();
+    await this.gpioButtonsSetup();
     await this.initListener();
   }
 
   // setup rpi-gpio
-  async gpioSetup () {
+  gpioSetup () {
     this.emit('debug', 'Setup rpi-gpio.');
-    RPiGPIO.setMode(this.Config.mode);
+    let gpio = require('rpi-gpio');
+    gpio.setMode(this.Config.mode);
+    return gpio;
+  }
+
+  // setup gpio button pins
+  async gpioButtonsSetup () {
+    this.emit('debug', 'Setup gpio button pins.');
     // setup each pin as a button input
     for (let i = 0; i < this.Config.pins.length; i++) {
       try {
@@ -41,7 +52,6 @@ class GPIOButtons extends EventEmitter {
         this.emit('error', `Failed to setup button pin ${this.Config.pins[i]}. ${error.message}`);
       }
     }
-    return RPiGPIO;
   }
 
   // configure the specified pin as a button input
@@ -49,7 +59,7 @@ class GPIOButtons extends EventEmitter {
     return new Promise((resolve, reject) => {
       this.emit('debug', `Setup button pin ${pin}.`);
       // setup gpio pin for button use
-      RPiGPIO.setup(pin, RPiGPIO.DIR_IN, RPiGPIO.EDGE_BOTH, () => resolve());
+      this.gpio.setup(pin, this.gpio.DIR_IN, this.gpio.EDGE_BOTH, () => resolve());
     });
   }
 
@@ -88,7 +98,7 @@ class GPIOButtons extends EventEmitter {
   buttonPreread (pin) {
     return new Promise((resolve, reject) => {
       this.emit('debug', `Preread button pin ${pin}.`);
-      RPiGPIO.read(pin, (error, value) => {
+      this.gpio.read(pin, (error, value) => {
         if (error) reject(new Error(error));
         else resolve(value);
       });
@@ -105,7 +115,7 @@ class GPIOButtons extends EventEmitter {
 
 };
 
-GPIOButtons.MODE_BCM = RPiGPIO.MODE_BCM;
-GPIOButtons.MODE_RPI = RPiGPIO.MODE_RPI;
+GPIOButtons.MODE_BCM = MODE_BCM;
+GPIOButtons.MODE_RPI = MODE_RPI;
 
 module.exports = GPIOButtons;

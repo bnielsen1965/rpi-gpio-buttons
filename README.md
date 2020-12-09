@@ -24,8 +24,7 @@ buttons attached to the GPIO inputs, and Node.js to develop your application.
 ```javascript
 const RPiGPIOButtons = require('rpi-gpio-buttons');
 let buttons = new RPiGPIOButtons({
-  mode: RPiGPIOButtons.MODE_BCM, // set BCM mode to use GPIO numbers
-  pins: [17, 27]                 // use GPIO 17 and 27 for buttons
+  pins: [17, 27] // use GPIO 17 and 27 for buttons
 });
 ```
 
@@ -91,29 +90,25 @@ let buttons = new RPiGPIOButtons({ pins: [17, 18, 27] });
 ```
 
 
-## async init([gpio])
+## async init()
 
 After creating an rpi-gpio-buttons instance the asynchronous init() method must be
-called to intialize rpi-gpio, the GPIO listener and the button event logic. Once the
-init() method resolves the button events will become active.
-
-If the application has already configured rpi-gpio for the button GPIO pins then it
-can be passed to the init() method as an argument and the rpi-gpio-buttons initialization
-sequence will skip the rpi-gpio setup and only setup the GPIO listener and button events.
+called to intialize rpi-gpio, the button GPIO pins, the GPIO listener and the button
+event logic. Once the init() method resolves the button events will become active.
 ```javascript
-// somewhere in your code you configure rpi-gpio
-let my_rpi_gpio = getRPiGPIO();
-// create an rpi-gpio-buttons instance
 let buttons = new RPiGPIOButtons({ pins: [17, 18, 27] });
-// asynchronously initialize buttons with the pre-configured rpi-gpio instance
-buttons.init(my_rpi_gpio)
-.then(() => {
-  console.log('buttons is initialized, events are active')
-})
-.catch(error => {
-  console.log(`An error occured during buttons init(). ${error.message}`);
-});
+// initialize asynchronously
+buttons
+  .init()
+  .catch(error => {
+    console.log('ERROR', error.stack);
+    process.exit(1);
+  });
 ```
+
+**NOTE:** If an rpi-gpio instance is passed to the constructor in the configuration settings
+then init() will skip the rpi-gpio initialization but will execute button GPIO pins, the
+GPIO listener and the button event logic. See the *gpio* configuration option below.
 
 
 ## on(event, handler)
@@ -121,6 +116,13 @@ buttons.init(my_rpi_gpio)
 As with any event emitter a number of listeners can be attached to the rpi-gpio-buttons
 instance to listen for events when the user interacts with a button. See the event types
 below for more detail.
+```javascript
+// listen for clicked events
+let buttons = new RPiGPIOButtons({ pins: [17, 18, 27] });
+buttons.on('clicked', pin => {
+  console.log(`Clicked button ${pin}.`);
+});
+```
 
 
 # Configuration
@@ -138,29 +140,6 @@ Optional configuration parameters can be included to control the behavior of the
 instance. The configuration parameters are as follows...
 
 
-## mode
-
-**(optional)**
-
-Default value: MODE_BCM
-
-Possible value: MODE_BCM or MODE_RPI
-
-The pin mode to be used in the rpi-gpio module. This determines how the pin numbers are
-named. In MODE_BCM the pin numbers are based on GPIO names, i.e. GPIO27 is pin 27. In
-MODE_RPI the pin numbers are based on the Raspberry Pi 40 pin header pin numbers, i.e.
-header pin number 11 is pin 11.
-
-The mode constants can be used from the rpi-gpio library or from the rpi-gpio-buttons
-library...
-```javascript
-const RPiGPIOButtons = require('rpi-gpio-buttons');
-// these two instances are using the same pin which is referenced in a different mode
-let buttonsBCM = new RPiGPIOButtons({ mode: RPiGPIOButtons.MODE_BCM, pins: [11] });
-let buttonsRPI = new RPiGPIOButtons({ mode: RPiGPIOButtons.MODE_RPI, pins: [17] });
-```
-
-
 ## pins
 
 **(required)**
@@ -174,63 +153,66 @@ let buttons = new RPiGPIOButtons({ pins: [17, 18, 27] });
 ```
 
 
+## mode
+
+**(optional)**
+
+Default value: MODE_BCM
+
+Possible value: MODE_BCM or MODE_RPI
+
+When the rpi-gpio-buttons init() method is called it will initialize the rpi-gpio module
+and set the pin mode used to associate the numbers in the pin array with GPIO pin numbers.
+See the [rpi-gpio](https://www.npmjs.com/package/rpi-gpio) documentation for more details
+about the pin modes.
+```javascript
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+// create an rpi-gpio-buttons instance with the rpi-gpio module setup in BCM mode
+let buttonsBCM = new RPiGPIOButtons({ mode: RPiGPIOButtons.MODE_BCM, pins: [11] });
+```
+or
+```javascript
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+// create an rpi-gpio-buttons instance with the rpi-gpio module setup in RPI mode
+let buttonsRPI = new RPiGPIOButtons({ mode: RPiGPIOButtons.MODE_RPI, pins: [17] });
+```
+
+**NOTE:** When including an existing rpi-gpio instance in the *gpio* configuration field
+the mode option the init() will not set the pin mode so the *mode* option is not needed.
+See the *gpio* configuration option for more detail.
+
+
 ## gpio
 
 **(optional)**
 
 Default value: undefined
 
-Possible value: rpi-gpio instance
+Possible value: set to an existing rpi-gpio instance
 
-If the rpi-gpio library is already loaded and the GPIO pins for the buttons are configured
-then it can be passed in the *gpio* field and the rpi-gpio-buttons module will skip
-the GPIO setup during initialization and only setup the GPIO listener and the button
-event emitter.
+If the application has already created an instance and initialized rpi-gpio then it
+can be passed to rpi-gpio-buttons in the configuration *gpio* field. This ensures that the
+application and rpi-gpio-buttons do not create competing instances of the rpi-gpio module.
 ```javascript
 const RPiGPIO = require('rpi-gpio');
 const RPiGPIOButtons = require('rpi-gpio-buttons');
-const PIN_UP = 17;
-const PIN_DOWN = 27;
 
-// configure rpi-gpio before creating rpi-gpio-buttons instance
+// setup the application rpi-gpio
 RPiGPIO.setMode(RPiGPIO.MODE_BCM);
-setupPin(PIN_UP)
-.then(() => {
-  return setupPin(PIN_DOWN);
-})
-.then(() => {
-  // use preconfigured rpi-gpio in new rpi-gpio-buttons
-  let buttons = new RPiGPIOButtons({ pins: [PIN_UP, PIN_DOWN], gpio: RPiGPIO });
-  buttons
-  .on('clicked', pin => {
-    switch(pin) {
-      case PIN_UP:
-      console.log('UP');
-      break;
 
-      case PIN_DOWN:
-      console.log('DOWN');
-      break;
-    }
-  })
-  .on('button_event', (type, pin) => {
-    console.log(`button_event ${type} on ${pin}`)
-  });
-  // initialize the rpi-gpio-buttons instance to start listener and events
-  buttons
-  .init(RPiGPIO)
-  .catch(error => {
-    console.log('ERROR', error.stack);
-    process.exit(1);
-  });
+// create an rpi-gpio-buttons instance that uses the existing rpi-gpio instance
+let buttons = new RPiGPIOButtons({
+  pins: [17, 18, 27], // define pins used for buttons
+  gpio: RPiGPIO       // use the applications rpi-gpio instance
 });
-
-// asynchronous function to setup rpi-gpio pin for a button input
-function setupPin (pin) {
-  return new Promise((resolve, reject) => {
-    RPiGPIO.setup(pin, RPiGPIO.DIR_IN, RPiGPIO.EDGE_BOTH, resolve);
+// initialize rpi-gpio-buttons
+buttons.init()
+  .then(() => {
+    console.log('buttons is initialized, events are active')
+  })
+  .catch(error => {
+    console.log(`An error occured during buttons init(). ${error.message}`);
   });
-}
 ```
 
 
