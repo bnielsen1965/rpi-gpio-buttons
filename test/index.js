@@ -39,7 +39,15 @@ function userClickedDown () {
 buttons.init()
 .then(() => {
   setTimeout(() => {
-    buttons.destroy();
+    buttons.destroy()
+      .then(() => {
+        console.log('Destroy complete.');
+        process.exit(0);
+      })
+      .catch(error => {
+        console.log(`Destroy error, ${error.stack}`);
+        process.exit(1);
+      })
   }, 30000);
 })
 .catch(error => {

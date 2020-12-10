@@ -1,6 +1,6 @@
 {
   "name": "rpi-gpio-buttons",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Generates button events from GPIO pins.",
   "main": "index.js",
   "scripts": {

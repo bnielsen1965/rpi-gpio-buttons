@@ -106,10 +106,22 @@ class GPIOButtons extends EventEmitter {
   }
 
   destroy () {
-    this.emit('debug', 'destroy() called.');
-    Object.keys(this.buttons).forEach(be => this.buttons[be].cleanup());
-    this.gpio.destroy(error => {
-      if (error) this.emit('error', error);
+    return new Promise((resolve, reject) => {
+      this.emit('debug', 'destroy() called, cleanup buttons.');
+      Object.keys(this.buttons).forEach(be => this.buttons[be].cleanup());
+      if (this.Config.gpio) {
+        // do not destroy the rpi-gpio that we did not create
+        resolve();
+        return;
+      }
+      this.emit('debug', 'Destroy gpio.');
+      this.gpio.destroy(error => {
+        if (error) {
+          this.emit('error', error);
+          reject(new Error(error));
+        }
+        else resolve();
+      });
     });
   }
 

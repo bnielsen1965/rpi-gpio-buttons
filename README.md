@@ -125,6 +125,46 @@ buttons.on('clicked', pin => {
 ```
 
 
+## async destroy()
+
+The destroy() method is used to cleanup event listeners and resources associated with
+the rpi-gpio-buttons instance once an application no longer requires use of the rpi-gpio-instance.
+```javascript
+// create rpi-gpio-buttons instance
+const RPiGPIOButtons = require('rpi-gpio-buttons');
+let buttons = new RPiGPIOButtons({ pins: [17, 27] });
+
+// listen to buttons
+buttons
+  .on('double_clicked', pin => {
+    if (pin === 27) {
+      // clean up and exit on double_clicked button pin 27
+      buttons.destroy()
+        .then(() => {
+          process.exit(0);
+        })
+        .catch(error => {
+          console.log(`Error while destroying buttons. ${error.message}`);
+          process.exit(1);
+        });
+    }
+  });
+
+// initialize buttons to start listeners
+buttons
+  .init()
+  .catch(error => {
+    console.log('ERROR', error.stack);
+    process.exit(1);
+  });
+```
+
+**NOTE:** If an rpi-gpio instance is passed to rpi-gpio-buttons in the constructor configuration
+then the destroy() method will only cleanup the event listener and button resources used
+by rpi-gpio-buttons, but it will not destroy the rpi-gpio instance. The application that
+created the rpi-gpio instance will be responsible for destroying the instance.
+
+
 # Configuration
 
 When creating a new instance of rpi-gpio-buttons the constructor must be provided a
